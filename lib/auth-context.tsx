@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 
-export type UserRole = "hr" | "hiring_manager"
+export type UserRole = "hr_admin" | "hr_team" | "hiring_manager"
 
 export interface User {
   id: string
@@ -16,8 +16,36 @@ export interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string, role: UserRole) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
+}
+
+// Mock user database - In production, this would be a real database
+const mockUserDatabase: Record<string, { id: string; name: string; email: string; role: UserRole; password: string; department?: string }> = {
+  "hradmin@tristone.com": {
+    id: "user_001",
+    name: "Admin User",
+    email: "hradmin@tristone.com",
+    role: "hr_admin",
+    password: "password",
+    department: "Human Resources"
+  },
+  "hr@tristone.com": {
+    id: "user_002",
+    name: "HR Team Member",
+    email: "hr@tristone.com",
+    role: "hr_team",
+    password: "password",
+    department: "Human Resources"
+  },
+  "manager@tristone.com": {
+    id: "user_003",
+    name: "Hiring Manager",
+    email: "manager@tristone.com",
+    role: "hiring_manager",
+    password: "password",
+    department: "Engineering"
+  }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,18 +68,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
       // Simulate API call - in production, this would validate against a backend
       await new Promise((resolve) => setTimeout(resolve, 500))
 
+      // Look up user in mock database
+      const userRecord = mockUserDatabase[email.toLowerCase()]
+      
+      if (!userRecord) {
+        throw new Error("User not found")
+      }
+
+      if (userRecord.password !== password) {
+        throw new Error("Invalid password")
+      }
+
+      // Create user object without password
       const newUser: User = {
-        id: `user_${Date.now()}`,
-        name: email.split("@")[0],
-        email,
-        role,
-        department: role === "hiring_manager" ? "Engineering" : undefined,
+        id: userRecord.id,
+        name: userRecord.name,
+        email: userRecord.email,
+        role: userRecord.role,
+        department: userRecord.department,
       }
 
       setUser(newUser)

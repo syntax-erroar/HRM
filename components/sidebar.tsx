@@ -20,9 +20,10 @@ import { useAuth } from "@/lib/auth-context"
 import { NotificationCenter } from "./notification-center"
 import { notificationService } from "@/lib/notification-service"
 
-const hrNavItems = [
+// HR Admin - Full system access including settings and approvals
+const hrAdminNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/job-requests", label: "Job Requests", icon: FileText },
+  { href: "/job-requests", label: "Positions", icon: FileText },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/interviews", label: "Interviews", icon: Calendar },
   { href: "/emails", label: "Email Templates", icon: Mail },
@@ -30,12 +31,21 @@ const hrNavItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ]
 
+// HR Team - Day-to-day HR operations (no settings/approvals)
+const hrTeamNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/job-requests", label: "Positions", icon: FileText },
+  { href: "/candidates", label: "Candidates", icon: Users },
+  { href: "/interviews", label: "Interviews", icon: Calendar },
+  { href: "/emails", label: "Email Templates", icon: Mail },
+]
+
+// Hiring Manager - Limited to their requisitions and candidates
 const hiringManagerNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/my-requisitions", label: "My Requisitions", icon: FileText },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/interviews", label: "Interviews", icon: Calendar },
-  { href: "/approvals", label: "Approvals", icon: CheckSquare },
 ]
 
 const publicNavItems = [
@@ -56,7 +66,13 @@ export function Sidebar() {
 
   let itemsToShow = publicNavItems
   if (user && !isPublicPage) {
-    itemsToShow = user.role === "hr" ? hrNavItems : hiringManagerNavItems
+    if (user.role === "hr_admin") {
+      itemsToShow = hrAdminNavItems
+    } else if (user.role === "hr_team") {
+      itemsToShow = hrTeamNavItems
+    } else if (user.role === "hiring_manager") {
+      itemsToShow = hiringManagerNavItems
+    }
   }
 
   const handleLogout = () => {
@@ -155,12 +171,19 @@ export function Sidebar() {
 
       {/* User Info and Logout */}
       <div className="p-4 border-t border-neutral-200 space-y-3">
-        {user && isOpen && (
-          <div className="text-xs bg-emerald-50 p-3 rounded-lg">
-            <p className="font-semibold text-neutral-900">{user.name}</p>
-            <p className="text-emerald-700 capitalize">{user.role.replace("_", " ")}</p>
-          </div>
-        )}
+        {user && isOpen && (() => {
+          const roleLabels: Record<string, string> = {
+            hr_admin: "HR Admin",
+            hr_team: "HR Team",
+            hiring_manager: "Hiring Manager"
+          }
+          return (
+            <div className="text-xs bg-emerald-50 p-3 rounded-lg">
+              <p className="font-semibold text-neutral-900">{user.name}</p>
+              <p className="text-emerald-700">{roleLabels[user.role] || user.role}</p>
+            </div>
+          )
+        })()}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors"

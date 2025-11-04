@@ -3,19 +3,20 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, CheckCircle, Clock, XCircle, Mail, Send, Globe, Eye, FileText } from "lucide-react"
+import { ChevronDown, CheckCircle, Clock, XCircle, Mail, Send, Globe, Eye, FileText, Pause, Ban } from "lucide-react"
 import { useState } from "react"
 
 interface JobRequest {
   id: number
   title: string
   department: string
-  status: "approved" | "pending" | "rejected" | "published"
+  status: "open" | "onhold" | "closed" | "cancelled"
   submittedBy: string
   submittedDate: string
   approvalDate: string | null
   description: string
   jobDescription?: string
+  professionalSummary?: string
   standardMessage?: string
   platforms?: string[]
   salaryRange?: string
@@ -23,38 +24,44 @@ interface JobRequest {
   employmentType?: string
   experienceLevel?: string
   publishedDate?: string | null
+  cancelledDate?: string | null
+  cancelledBy?: string
+  cancellationReason?: string
+  hiringManager?: string
+  hiringManagerEmail?: string
 }
 
 interface JobRequestListProps {
   requests: JobRequest[]
   onSendNotification?: (request: JobRequest, type: string) => void
+  onCancelRequest?: (request: JobRequest) => void
   isSendingEmail?: boolean
 }
 
 const statusConfig = {
-  approved: {
+  open: {
+    icon: CheckCircle,
+    color: "bg-blue-50 text-blue-700",
+    badge: "bg-blue-100 text-blue-800",
+  },
+  onhold: {
+    icon: Pause,
+    color: "bg-yellow-50 text-yellow-700",
+    badge: "bg-yellow-100 text-yellow-800",
+  },
+  closed: {
     icon: CheckCircle,
     color: "bg-green-50 text-green-700",
     badge: "bg-green-100 text-green-800",
   },
-  pending: {
-    icon: Clock,
-    color: "bg-amber-50 text-amber-700",
-    badge: "bg-amber-100 text-amber-800",
-  },
-  rejected: {
-    icon: XCircle,
+  cancelled: {
+    icon: Ban,
     color: "bg-red-50 text-red-700",
     badge: "bg-red-100 text-red-800",
   },
-  published: {
-    icon: Globe,
-    color: "bg-blue-50 text-blue-700",
-    badge: "bg-blue-100 text-blue-800",
-  },
 }
 
-export function JobRequestList({ requests, onSendNotification, isSendingEmail = false }: JobRequestListProps) {
+export function JobRequestList({ requests, onSendNotification, onCancelRequest, isSendingEmail = false }: JobRequestListProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   return (
@@ -145,9 +152,7 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
                           </div>
                           {request.approvalDate && (
                             <div className="flex justify-between">
-                              <span className="text-sm text-neutral-600">
-                                {request.status === "approved" ? "Approved" : "Reviewed"}:
-                              </span>
+                              <span className="text-sm text-neutral-600">Approved:</span>
                               <span className="text-sm font-medium text-neutral-900">{request.approvalDate}</span>
                             </div>
                           )}
@@ -155,6 +160,12 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
                             <div className="flex justify-between">
                               <span className="text-sm text-neutral-600">Published:</span>
                               <span className="text-sm font-medium text-neutral-900">{request.publishedDate}</span>
+                            </div>
+                          )}
+                          {request.cancelledDate && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Cancelled:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.cancelledDate}</span>
                             </div>
                           )}
                         </div>
@@ -167,6 +178,16 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
                         <h4 className="text-sm font-semibold text-neutral-700 mb-2">Job Description</h4>
                         <div className="bg-white p-4 rounded border border-neutral-200 max-h-40 overflow-y-auto">
                           <p className="text-sm text-neutral-700 whitespace-pre-wrap">{request.jobDescription}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Professional Summary */}
+                    {request.professionalSummary && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Professional Summary</h4>
+                        <div className="bg-blue-50 p-4 rounded border border-blue-200 max-h-40 overflow-y-auto">
+                          <p className="text-sm text-blue-900 whitespace-pre-wrap">{request.professionalSummary}</p>
                         </div>
                       </div>
                     )}
@@ -196,83 +217,56 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
                       </div>
                     )}
 
+                    {/* Cancellation Info */}
+                    {request.status === "cancelled" && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Cancellation Details</h4>
+                        <div className="bg-red-50 p-4 rounded border border-red-200">
+                          {request.cancelledBy && (
+                            <p className="text-sm text-neutral-700 mb-1">
+                              <span className="font-medium">Cancelled by:</span> {request.cancelledBy}
+                            </p>
+                          )}
+                          {request.cancellationReason && (
+                            <p className="text-sm text-neutral-700">
+                              <span className="font-medium">Reason:</span> {request.cancellationReason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-3">
-                      <div className="flex gap-3">
-                        {request.status === "pending" && (
-                          <>
-                            <Button 
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => onSendNotification?.(request, 'approval')}
-                              disabled={isSendingEmail}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Approve & Notify
-                            </Button>
+                      {request.status === "cancelled" ? (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-neutral-600">This position request has been cancelled</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex gap-3">
+                            {(request.status === "open" || request.status === "onhold") && onCancelRequest && (
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 border-red-200 bg-red-50 text-red-700"
+                                onClick={() => onCancelRequest(request)}
+                                disabled={isSendingEmail}
+                              >
+                                <Ban className="w-4 h-4 mr-2" />
+                                Cancel Request
+                              </Button>
+                            )}
                             <Button 
                               variant="outline" 
-                              className="flex-1 border-red-200 bg-red-50 text-red-700"
-                              onClick={() => onSendNotification?.(request, 'rejection')}
+                              className="flex-1 border-blue-200 bg-blue-50 text-blue-700"
+                              onClick={() => onSendNotification?.(request, 'custom')}
                               disabled={isSendingEmail}
                             >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Reject & Notify
+                              <Mail className="w-4 h-4 mr-2" />
+                              Send Email
                             </Button>
-                          </>
-                        )}
-                        {request.status === "approved" && (
-                          <Button 
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => onSendNotification?.(request, 'publish')}
-                            disabled={isSendingEmail}
-                          >
-                            <Globe className="w-4 h-4 mr-2" />
-                            Publish to Platforms
-                          </Button>
-                        )}
-                        {request.status === "published" && (
-                          <Button 
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => onSendNotification?.(request, 'view')}
-                            disabled={isSendingEmail}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Published Job
-                          </Button>
-                        )}
-                        {request.status === "rejected" && (
-                          <Button 
-                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
-                            onClick={() => onSendNotification?.(request, 'reminder')}
-                            disabled={isSendingEmail}
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Send Reminder
-                          </Button>
-                        )}
-                      </div>
-                      
-                      <div className="flex gap-3">
-                        <Button 
-                          variant="outline" 
-                          className="flex-1 border-blue-200 bg-blue-50 text-blue-700"
-                          onClick={() => onSendNotification?.(request, 'custom')}
-                          disabled={isSendingEmail}
-                        >
-                          <Mail className="w-4 h-4 mr-2" />
-                          Send Custom Email
-                        </Button>
-                        {request.status === "pending" && (
-                          <Button 
-                            variant="outline" 
-                            className="flex-1 border-amber-200 bg-amber-50 text-amber-700"
-                            onClick={() => onSendNotification?.(request, 'reminder')}
-                            disabled={isSendingEmail}
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Send Reminder
-                          </Button>
-                        )}
-                      </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

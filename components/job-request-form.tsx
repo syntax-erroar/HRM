@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +12,9 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileText, MessageSquare, Globe, Eye, Edit3 } from "lucide-react"
+import { FileText, MessageSquare, Globe, Eye, Edit3, RefreshCw } from "lucide-react"
+import { getAvailableRoles, getJobTemplate } from "@/lib/job-templates-db"
+import { useAuth } from "@/lib/auth-context"
 
 interface JobRequestFormProps {
   onSubmit: (data: any) => void
@@ -20,22 +22,75 @@ interface JobRequestFormProps {
 }
 
 export function JobRequestForm({ onSubmit, onCancel }: JobRequestFormProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: "",
     department: "",
     description: "",
-    submittedBy: "",
+    submittedBy: user?.name || "",
     jobDescription: "",
+    professionalSummary: "",
     standardMessage: "",
     platforms: [] as string[],
     salaryRange: "",
     location: "",
     employmentType: "",
     experienceLevel: "",
+    hiringManager: "",
+    hiringManagerEmail: "",
   })
+
+  // Mock hiring managers list - in production, fetch from API
+  const hiringManagers = [
+    { name: "Rajesh Verma", email: "manager@tristone.com", department: "Engineering" },
+    { name: "Kavita Desai", email: "kavita.desai@tristone.com", department: "Product" },
+    { name: "Arjun Patel", email: "arjun.patel@tristone.com", department: "Design" },
+  ]
 
   const [activeTab, setActiveTab] = useState("basic")
   const [previewMode, setPreviewMode] = useState(false)
+  const [loadedFromDb, setLoadedFromDb] = useState(false)
+  const availableRoles = getAvailableRoles()
+
+  // Auto-populate JD, Prof Summary, and Social Message when job title changes
+  useEffect(() => {
+    if (formData.title && availableRoles.includes(formData.title)) {
+      const template = getJobTemplate(formData.title)
+      if (template) {
+        setFormData(prev => ({
+          ...prev,
+          jobDescription: template.jobDescription,
+          professionalSummary: template.professionalSummary,
+          standardMessage: replacePlaceholders(template.socialMessageTemplate, prev),
+          department: template.category
+        }))
+        setLoadedFromDb(true)
+      }
+    }
+  }, [formData.title])
+
+  // Update social message when other fields change
+  useEffect(() => {
+    if (loadedFromDb && formData.title) {
+      const template = getJobTemplate(formData.title)
+      if (template) {
+        setFormData(prev => ({
+          ...prev,
+          standardMessage: replacePlaceholders(template.socialMessageTemplate, prev)
+        }))
+      }
+    }
+  }, [formData.salaryRange, formData.location, formData.employmentType, formData.experienceLevel, formData.department])
+
+  const replacePlaceholders = (template: string, data: any): string => {
+    return template
+      .replace(/{jobTitle}/g, data.title || '{jobTitle}')
+      .replace(/{location}/g, data.location || '{location}')
+      .replace(/{salaryRange}/g, data.salaryRange || '{salaryRange}')
+      .replace(/{employmentType}/g, data.employmentType || '{employmentType}')
+      .replace(/{experienceLevel}/g, data.experienceLevel || '{experienceLevel}')
+      .replace(/{department}/g, data.department || '{department}')
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,15 +99,19 @@ export function JobRequestForm({ onSubmit, onCancel }: JobRequestFormProps) {
       title: "", 
       department: "", 
       description: "", 
-      submittedBy: "",
+      submittedBy: user?.name || "",
       jobDescription: "",
+      professionalSummary: "",
       standardMessage: "",
       platforms: [],
       salaryRange: "",
       location: "",
       employmentType: "",
       experienceLevel: "",
+      hiringManager: "",
+      hiringManagerEmail: "",
     })
+    setLoadedFromDb(false)
   }
 
   const handlePlatformChange = (platform: string, checked: boolean) => {
@@ -114,7 +173,7 @@ Ready to make an impact? Apply now! 🎯
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="basic" className="flex items-center gap-2">
             <FileText size={16} />
             Basic Info
@@ -123,9 +182,13 @@ Ready to make an impact? Apply now! 🎯
             <Edit3 size={16} />
             Job Description
           </TabsTrigger>
+          <TabsTrigger value="summary" className="flex items-center gap-2">
+            <FileText size={16} />
+            Prof. Summary
+          </TabsTrigger>
           <TabsTrigger value="message" className="flex items-center gap-2">
             <MessageSquare size={16} />
-            Message Template
+            Social Message
           </TabsTrigger>
           <TabsTrigger value="platforms" className="flex items-center gap-2">
             <Globe size={16} />
@@ -134,19 +197,30 @@ Ready to make an impact? Apply now! 🎯
         </TabsList>
 
         <TabsContent value="basic" className="space-y-6">
+          {loadedFromDb && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-sm text-green-800">
+              <RefreshCw size={16} />
+              Job Description, Professional Summary, and Social Message loaded from database. HR Admin can edit as needed.
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="title" className="text-neutral-700 font-medium">
-                Job Title *
+                Job Title * (Select from predefined roles)
               </Label>
-              <Input
-                id="title"
-                placeholder="e.g., Senior Developer"
+              <Select
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-                className="border-neutral-200"
-              />
+                onValueChange={(value) => setFormData({ ...formData, title: value })}
+              >
+                <SelectTrigger className="border-neutral-200">
+                  <SelectValue placeholder="Select job title" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -238,36 +312,104 @@ Ready to make an impact? Apply now! 🎯
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="submittedBy" className="text-neutral-700 font-medium">
-              Submitted By *
-            </Label>
-            <Input
-              id="submittedBy"
-              placeholder="Your name"
-              value={formData.submittedBy}
-              onChange={(e) => setFormData({ ...formData, submittedBy: e.target.value })}
-              required
-              className="border-neutral-200"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="submittedBy" className="text-neutral-700 font-medium">
+                Submitted By *
+              </Label>
+              <Input
+                id="submittedBy"
+                placeholder="Your name"
+                value={formData.submittedBy}
+                onChange={(e) => setFormData({ ...formData, submittedBy: e.target.value })}
+                required
+                className="border-neutral-200"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="hiringManager" className="text-neutral-700 font-medium">
+                Hiring Manager * (for JD Confirmation)
+              </Label>
+              <Select
+                value={formData.hiringManager}
+                onValueChange={(value) => {
+                  const manager = hiringManagers.find(m => m.name === value)
+                  setFormData({ 
+                    ...formData, 
+                    hiringManager: value,
+                    hiringManagerEmail: manager?.email || ""
+                  })
+                }}
+              >
+                <SelectTrigger className="border-neutral-200">
+                  <SelectValue placeholder="Select hiring manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hiringManagers.map(manager => (
+                    <SelectItem key={manager.email} value={manager.name}>
+                      {manager.name} - {manager.department}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-neutral-500">
+                JD and Professional Summary will be sent for confirmation
+              </p>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="description" className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="jobDescription" className="text-neutral-700 font-medium">
-              Detailed Job Description *
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="jobDescription" className="text-neutral-700 font-medium">
+                Detailed Job Description * {loadedFromDb && "(From Database - Editable)"}
+              </Label>
+              {loadedFromDb && user?.role === "hr_admin" && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">HR Admin Can Edit</Badge>
+              )}
+            </div>
             <Textarea
               id="jobDescription"
               placeholder="Provide a comprehensive job description including responsibilities, requirements, qualifications, and company information..."
               value={formData.jobDescription}
               onChange={(e) => setFormData({ ...formData, jobDescription: e.target.value })}
               required
-              className="border-neutral-200 min-h-64"
+              readOnly={user?.role !== "hr_admin" && loadedFromDb}
+              className={`border-neutral-200 min-h-64 ${user?.role !== "hr_admin" && loadedFromDb ? 'bg-neutral-50' : ''}`}
             />
             <p className="text-sm text-neutral-500">
-              This will be the main job description posted on job platforms. Be detailed and specific about requirements.
+              {user?.role === "hr_admin" 
+                ? "HR Admin can edit the database template as needed before submitting."
+                : "This job description is fetched from the database and will be posted on job platforms."}
+            </p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="summary" className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="professionalSummary" className="text-neutral-700 font-medium">
+                Professional Summary * {loadedFromDb && "(From Database - Editable)"}
+              </Label>
+              {loadedFromDb && user?.role === "hr_admin" && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">HR Admin Can Edit</Badge>
+              )}
+            </div>
+            <Textarea
+              id="professionalSummary"
+              placeholder="Company overview and professional summary to be included with the job posting..."
+              value={formData.professionalSummary}
+              onChange={(e) => setFormData({ ...formData, professionalSummary: e.target.value })}
+              required
+              readOnly={user?.role !== "hr_admin" && loadedFromDb}
+              className={`border-neutral-200 min-h-32 ${user?.role !== "hr_admin" && loadedFromDb ? 'bg-neutral-50' : ''}`}
+            />
+            <p className="text-sm text-neutral-500">
+              {user?.role === "hr_admin"
+                ? "HR Admin can edit the professional summary template as needed."
+                : "This professional summary provides context about Tristone Partners for job postings."}
             </p>
           </div>
         </TabsContent>
@@ -276,17 +418,11 @@ Ready to make an impact? Apply now! 🎯
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="standardMessage" className="text-neutral-700 font-medium">
-                Standard Social Media Message
+                Social Media Message Template {loadedFromDb && "(Auto-generated with Placeholders)"}
               </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setFormData({ ...formData, standardMessage: defaultStandardMessage })}
-                className="text-xs"
-              >
-                Use Template
-              </Button>
+              {loadedFromDb && (
+                <Badge variant="outline" className="bg-green-50 text-green-700">Auto-populated</Badge>
+              )}
             </div>
             <Textarea
               id="standardMessage"
@@ -296,7 +432,7 @@ Ready to make an impact? Apply now! 🎯
               className="border-neutral-200 min-h-48"
             />
             <p className="text-sm text-neutral-500">
-              This message will be used for social media posts and job board announcements. Keep it engaging and professional.
+              Placeholders like {'{'}jobTitle{'}'}, {'{'}location{'}'}, {'{'}salaryRange{'}'} are automatically replaced with actual values. {user?.role === "hr_admin" && "You can customize this message as needed."}
             </p>
           </div>
 
@@ -362,9 +498,9 @@ Ready to make an impact? Apply now! 🎯
           type="submit" 
           onClick={handleSubmit}
           className="bg-blue-600 hover:bg-blue-700 text-white"
-          disabled={!formData.title || !formData.department || !formData.jobDescription || formData.platforms.length === 0}
+          disabled={!formData.title || !formData.department || !formData.jobDescription || !formData.professionalSummary || formData.platforms.length === 0}
         >
-          Submit for HR Approval
+          Submit for JD Approval
         </Button>
       </div>
     </div>
