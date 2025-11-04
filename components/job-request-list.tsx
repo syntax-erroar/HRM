@@ -3,18 +3,26 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, CheckCircle, Clock, XCircle, Mail, Send } from "lucide-react"
+import { ChevronDown, CheckCircle, Clock, XCircle, Mail, Send, Globe, Eye, FileText } from "lucide-react"
 import { useState } from "react"
 
 interface JobRequest {
   id: number
   title: string
   department: string
-  status: "approved" | "pending" | "rejected"
+  status: "approved" | "pending" | "rejected" | "published"
   submittedBy: string
   submittedDate: string
   approvalDate: string | null
   description: string
+  jobDescription?: string
+  standardMessage?: string
+  platforms?: string[]
+  salaryRange?: string
+  location?: string
+  employmentType?: string
+  experienceLevel?: string
+  publishedDate?: string | null
 }
 
 interface JobRequestListProps {
@@ -38,6 +46,11 @@ const statusConfig = {
     icon: XCircle,
     color: "bg-red-50 text-red-700",
     badge: "bg-red-100 text-red-800",
+  },
+  published: {
+    icon: Globe,
+    color: "bg-blue-50 text-blue-700",
+    badge: "bg-blue-100 text-blue-800",
   },
 }
 
@@ -90,26 +103,98 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
 
               {isExpanded && (
                 <div className="border-t border-neutral-200 p-6 bg-neutral-50">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-neutral-700 mb-2">Description</h4>
-                      <p className="text-sm text-neutral-600">{request.description}</p>
+                  <div className="space-y-6">
+                    {/* Job Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Job Details</h4>
+                        <div className="space-y-2">
+                          {request.salaryRange && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Salary:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.salaryRange}</span>
+                            </div>
+                          )}
+                          {request.location && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Location:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.location}</span>
+                            </div>
+                          )}
+                          {request.employmentType && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Type:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.employmentType}</span>
+                            </div>
+                          )}
+                          {request.experienceLevel && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Experience:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.experienceLevel}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Timeline</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-neutral-600">Submitted:</span>
+                            <span className="text-sm font-medium text-neutral-900">{request.submittedDate}</span>
+                          </div>
+                          {request.approvalDate && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">
+                                {request.status === "approved" ? "Approved" : "Reviewed"}:
+                              </span>
+                              <span className="text-sm font-medium text-neutral-900">{request.approvalDate}</span>
+                            </div>
+                          )}
+                          {request.publishedDate && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-neutral-600">Published:</span>
+                              <span className="text-sm font-medium text-neutral-900">{request.publishedDate}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Job Description */}
+                    {request.jobDescription && (
                       <div>
-                        <p className="text-xs text-neutral-500 uppercase tracking-wide">Submitted Date</p>
-                        <p className="text-sm font-medium text-neutral-900">{request.submittedDate}</p>
-                      </div>
-                      {request.approvalDate && (
-                        <div>
-                          <p className="text-xs text-neutral-500 uppercase tracking-wide">
-                            {request.status === "approved" ? "Approved" : "Reviewed"} Date
-                          </p>
-                          <p className="text-sm font-medium text-neutral-900">{request.approvalDate}</p>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Job Description</h4>
+                        <div className="bg-white p-4 rounded border border-neutral-200 max-h-40 overflow-y-auto">
+                          <p className="text-sm text-neutral-700 whitespace-pre-wrap">{request.jobDescription}</p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Standard Message */}
+                    {request.standardMessage && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Social Media Message</h4>
+                        <div className="bg-white p-4 rounded border border-neutral-200 max-h-32 overflow-y-auto">
+                          <p className="text-sm text-neutral-700 whitespace-pre-wrap">{request.standardMessage}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Platforms */}
+                    {request.platforms && request.platforms.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-neutral-700 mb-2">Target Platforms</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {request.platforms.map((platform) => (
+                            <Badge key={platform} variant="secondary" className="gap-1">
+                              <Globe size={12} />
+                              {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-3">
                       <div className="flex gap-3">
@@ -135,8 +220,23 @@ export function JobRequestList({ requests, onSendNotification, isSendingEmail = 
                           </>
                         )}
                         {request.status === "approved" && (
-                          <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
-                            Publish Job Posting
+                          <Button 
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => onSendNotification?.(request, 'publish')}
+                            disabled={isSendingEmail}
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            Publish to Platforms
+                          </Button>
+                        )}
+                        {request.status === "published" && (
+                          <Button 
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => onSendNotification?.(request, 'view')}
+                            disabled={isSendingEmail}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Published Job
                           </Button>
                         )}
                         {request.status === "rejected" && (

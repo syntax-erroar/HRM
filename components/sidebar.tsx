@@ -13,9 +13,12 @@ import {
   Menu,
   Briefcase,
   LogOut,
+  Bell,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { NotificationCenter } from "./notification-center"
+import { notificationService } from "@/lib/notification-service"
 
 const hrNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -45,6 +48,8 @@ export function Sidebar() {
   const router = useRouter()
   const { user, logout } = useAuth()
   const [isOpen, setIsOpen] = useState(true)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const isPublicPage = pathname === "/jobs" || pathname === "/apply" || pathname === "/login"
   const isLoginPage = pathname === "/login"
@@ -58,6 +63,27 @@ export function Sidebar() {
     logout()
     router.push("/login")
   }
+
+  // Load unread count on mount
+  useEffect(() => {
+    if (user) {
+      const count = notificationService.getUnreadCount(user.id)
+      setUnreadCount(count)
+    }
+  }, [user])
+
+  // Subscribe to notifications
+  useEffect(() => {
+    if (!user) return
+
+    const unsubscribe = notificationService.subscribe((notification) => {
+      if (notification.userId === user.id || !notification.userId) {
+        setUnreadCount(prev => prev + 1)
+      }
+    })
+
+    return unsubscribe
+  }, [user])
 
   if (isLoginPage) {
     return null
@@ -107,6 +133,26 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Notifications Button */}
+      {user && !isPublicPage && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-700 hover:bg-emerald-50 hover:text-emerald-700 transition-all w-full"
+          >
+            <div className="relative">
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
+            {isOpen && <span className="text-sm font-medium">Notifications</span>}
+          </button>
+        </div>
+      )}
+
       {/* User Info and Logout */}
       <div className="p-4 border-t border-neutral-200 space-y-3">
         {user && isOpen && (
@@ -123,6 +169,12 @@ export function Sidebar() {
           {isOpen && <span>Logout</span>}
         </button>
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </aside>
   )
 }

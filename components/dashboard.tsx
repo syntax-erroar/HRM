@@ -5,11 +5,59 @@ import { Plus, TrendingUp, Clock, Users, FileText } from "lucide-react"
 import { StatCard } from "./stat-card"
 import { RecentActivity } from "./recent-activity"
 import { UpcomingInterviews } from "./upcoming-interviews"
+import { ApprovalQueue } from "./approval-queue"
 import { useAuth } from "@/lib/auth-context"
+import { useState } from "react"
 
 export function Dashboard() {
   const { user } = useAuth()
   const isHR = user?.role === "hr"
+
+  // Mock approval data
+  const approvalData = [
+    {
+      id: 1,
+      title: "Senior Developer - Engineering",
+      department: "Engineering",
+      submittedBy: "John Smith",
+      submittedDate: "2 hours ago",
+      priority: "high" as const,
+      type: "job_posting" as const,
+    },
+    {
+      id: 2,
+      title: "Product Manager - Product",
+      department: "Product",
+      submittedBy: "Sarah Johnson",
+      submittedDate: "4 hours ago",
+      priority: "medium" as const,
+      type: "job_posting" as const,
+    },
+    {
+      id: 3,
+      title: "UX Designer - Design",
+      department: "Design",
+      submittedBy: "Mike Chen",
+      submittedDate: "1 day ago",
+      priority: "low" as const,
+      type: "job_posting" as const,
+    },
+  ]
+
+  const handleViewDetails = (item: any) => {
+    // Navigate to approval details
+    console.log("View details for:", item)
+  }
+
+  const handleQuickApprove = (item: any) => {
+    // Quick approve logic
+    console.log("Quick approve:", item)
+  }
+
+  const handleQuickReject = (item: any) => {
+    // Quick reject logic
+    console.log("Quick reject:", item)
+  }
 
   return (
     <div className="p-8 bg-gradient-to-br from-neutral-50 to-emerald-50 min-h-screen">
@@ -51,8 +99,16 @@ export function Dashboard() {
         <div className="lg:col-span-2">
           <UpcomingInterviews />
         </div>
-        <div>
+        <div className="space-y-6">
           <RecentActivity />
+          {isHR && (
+            <ApprovalQueue
+              approvals={approvalData}
+              onViewDetails={handleViewDetails}
+              onQuickApprove={handleQuickApprove}
+              onQuickReject={handleQuickReject}
+            />
+          )}
         </div>
       </div>
     </div>

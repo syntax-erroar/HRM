@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { Search, CheckCircle, XCircle, Clock, AlertCircle, Bell } from "lucide-react"
+import { Search, CheckCircle, XCircle, Clock, AlertCircle, Bell, FileText } from "lucide-react"
+import { HRApprovalWorkflow } from "@/components/hr-approval-workflow"
+import { useToast } from "@/hooks/use-toast"
 
 interface ApprovalRequest {
   id: number
@@ -133,8 +135,10 @@ const notifications: Notification[] = [
 ]
 
 export default function ApprovalsPage() {
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const filteredRequests = approvalRequests.filter(
     (request) =>
@@ -147,6 +151,89 @@ export default function ApprovalsPage() {
   const rejectedRequests = filteredRequests.filter((r) => r.status === "rejected")
 
   const unreadNotifications = notifications.filter((n) => !n.read)
+
+  const handleApprove = async (request: ApprovalRequest, comments: string) => {
+    setIsProcessing(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      toast({
+        title: "Request Approved",
+        description: `${request.title} has been approved and is ready for publishing.`,
+      })
+      
+      // Update the request status
+      const updatedRequest = { ...request, status: "approved" as const }
+      setSelectedRequest(updatedRequest)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleReject = async (request: ApprovalRequest, comments: string) => {
+    setIsProcessing(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      toast({
+        title: "Request Rejected",
+        description: `${request.title} has been rejected.`,
+      })
+      
+      // Update the request status
+      const updatedRequest = { ...request, status: "rejected" as const }
+      setSelectedRequest(updatedRequest)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handlePublish = async (request: ApprovalRequest) => {
+    setIsProcessing(true)
+    try {
+      // Simulate API call to publish to platforms
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      toast({
+        title: "Job Published",
+        description: `${request.title} has been published to all selected platforms.`,
+      })
+      
+      // Update the request status
+      const updatedRequest = { 
+        ...request, 
+        status: "published" as const,
+        publishedDate: new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      }
+      setSelectedRequest(updatedRequest)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to publish job",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -182,9 +269,32 @@ export default function ApprovalsPage() {
       <main className="flex-1 overflow-auto">
         <div className="p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-neutral-900">Approvals & Notifications</h1>
-            <p className="text-neutral-500 mt-1">Manage approval requests and stay updated</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-neutral-900">Approvals & Notifications</h1>
+                <p className="text-neutral-500 mt-1">Manage approval requests and stay updated</p>
+              </div>
+              {selectedRequest && (
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedRequest(null)}
+                  className="border-neutral-200"
+                >
+                  Back to List
+                </Button>
+              )}
+            </div>
           </div>
+
+          {selectedRequest ? (
+            <HRApprovalWorkflow
+              request={selectedRequest}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onPublish={handlePublish}
+              isProcessing={isProcessing}
+            />
+          ) : (
 
           <Tabs defaultValue="approvals" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -229,7 +339,8 @@ export default function ApprovalsPage() {
                       {pendingRequests.map((request) => (
                         <Card
                           key={request.id}
-                          className="p-6 border border-neutral-200 hover:border-blue-300 transition-colors"
+                          className="p-6 border border-neutral-200 hover:border-blue-300 transition-colors cursor-pointer"
+                          onClick={() => setSelectedRequest(request)}
                         >
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
@@ -261,13 +372,26 @@ export default function ApprovalsPage() {
                           </div>
 
                           <div className="flex gap-3">
-                            <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2">
+                            <Button 
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRequest(request)
+                              }}
+                            >
                               <CheckCircle size={16} />
-                              Approve
+                              Review & Approve
                             </Button>
-                            <Button variant="outline" className="flex-1 border-neutral-200 bg-transparent gap-2">
-                              <XCircle size={16} />
-                              Reject
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 border-neutral-200 bg-transparent gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRequest(request)
+                              }}
+                            >
+                              <FileText size={16} />
+                              View Details
                             </Button>
                           </div>
                         </Card>
@@ -355,6 +479,7 @@ export default function ApprovalsPage() {
               </div>
             </TabsContent>
           </Tabs>
+          )}
         </div>
       </main>
     </div>

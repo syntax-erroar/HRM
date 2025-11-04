@@ -22,11 +22,19 @@ export default function JobRequestsPage() {
       id: 1,
       title: "Senior Developer",
       department: "Engineering",
-      status: "approved",
+      status: "published",
       submittedBy: "John Smith",
       submittedDate: "Oct 15, 2025",
       approvalDate: "Oct 18, 2025",
+      publishedDate: "Oct 20, 2025",
       description: "Looking for an experienced developer with 5+ years of experience",
+      jobDescription: "We are seeking a Senior Developer to join our engineering team. You will be responsible for designing, developing, and maintaining high-quality software solutions. The ideal candidate will have 5+ years of experience in full-stack development, strong problem-solving skills, and experience with modern web technologies.",
+      standardMessage: "🚀 Exciting Opportunity: Senior Developer\n\nWe're looking for a talented Senior Developer to join our Engineering team!\n\n📍 Location: San Francisco, CA\n💰 Salary: $120k - $160k\n📋 Type: Full-time\n\nKey Requirements:\n• 5+ years of relevant experience\n• Strong technical skills and problem-solving abilities\n• Excellent communication and collaboration skills\n\nReady to make an impact? Apply now! 🎯",
+      platforms: ["linkedin", "indeed", "glassdoor"],
+      salaryRange: "$120k - $160k",
+      location: "San Francisco, CA",
+      employmentType: "Full-time",
+      experienceLevel: "Senior Level (5+ years)",
     },
     {
       id: 2,
@@ -37,6 +45,13 @@ export default function JobRequestsPage() {
       submittedDate: "Oct 20, 2025",
       approvalDate: null,
       description: "Need a PM to lead our new product initiative",
+      jobDescription: "We are looking for a Product Manager to lead our new product initiative. You will be responsible for defining product strategy, working with cross-functional teams, and driving product development from conception to launch.",
+      standardMessage: "🚀 Exciting Opportunity: Product Manager\n\nWe're looking for a talented Product Manager to join our Product team!\n\n📍 Location: Remote\n💰 Salary: $100k - $140k\n📋 Type: Full-time\n\nKey Requirements:\n• 3+ years of product management experience\n• Strong analytical and communication skills\n• Experience with agile methodologies\n\nReady to make an impact? Apply now! 🎯",
+      platforms: ["linkedin", "indeed"],
+      salaryRange: "$100k - $140k",
+      location: "Remote",
+      employmentType: "Full-time",
+      experienceLevel: "Mid Level (3-5 years)",
     },
     {
       id: 3,
@@ -47,6 +62,13 @@ export default function JobRequestsPage() {
       submittedDate: "Oct 10, 2025",
       approvalDate: "Oct 12, 2025",
       description: "Designer for mobile app redesign project",
+      jobDescription: "We are seeking a UX Designer to lead our mobile app redesign project. You will be responsible for creating user-centered designs, conducting user research, and collaborating with development teams to implement design solutions.",
+      standardMessage: "🚀 Exciting Opportunity: UX Designer\n\nWe're looking for a talented UX Designer to join our Design team!\n\n📍 Location: New York, NY\n💰 Salary: $80k - $120k\n📋 Type: Full-time\n\nKey Requirements:\n• 3+ years of UX design experience\n• Strong portfolio of mobile app designs\n• Experience with design tools and prototyping\n\nReady to make an impact? Apply now! 🎯",
+      platforms: ["linkedin", "dice"],
+      salaryRange: "$80k - $120k",
+      location: "New York, NY",
+      employmentType: "Full-time",
+      experienceLevel: "Mid Level (3-5 years)",
     },
   ])
 
@@ -61,9 +83,15 @@ export default function JobRequestsPage() {
         day: "numeric",
       }),
       approvalDate: null,
+      publishedDate: null,
     }
     setJobRequests([newRequest, ...jobRequests])
     setShowForm(false)
+    
+    toast({
+      title: "Job Request Submitted",
+      description: "Your job request has been submitted for HR approval.",
+    })
   }
 
   const handleSendNotification = async (request: any, type: string) => {
@@ -94,6 +122,40 @@ export default function JobRequestsPage() {
             `Dear ${request.submittedBy},\n\nThis is a reminder that your job request for "${request.title}" is still pending approval.\n\nDepartment: ${request.department}\nSubmitted: ${request.submittedDate}\nStatus: Pending\n\nPlease ensure all required documentation is complete.\n\nBest regards,\nHR Team`
           )
           break
+        case 'publish':
+          // Simulate publishing to platforms
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          result = { success: true }
+          // Update the request status to published
+          setJobRequests(prev => prev.map(req => 
+            req.id === request.id 
+              ? { ...req, status: "published", publishedDate: new Date().toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short", 
+                  day: "numeric",
+                })}
+              : req
+          ))
+          break
+        case 'view':
+          // Open published job links
+          if (request.platforms) {
+            const platformUrls = {
+              linkedin: `https://linkedin.com/jobs/view/${request.id}`,
+              indeed: `https://indeed.com/viewjob?jk=${request.id}`,
+              glassdoor: `https://glassdoor.com/job-listing/${request.id}`,
+              angel: `https://angel.co/company/jobs/${request.id}`,
+              dice: `https://dice.com/jobs/detail/${request.id}`,
+              ziprecruiter: `https://ziprecruiter.com/jobs/${request.id}`
+            }
+            
+            request.platforms.forEach(platform => {
+              if (platformUrls[platform as keyof typeof platformUrls]) {
+                window.open(platformUrls[platform as keyof typeof platformUrls], '_blank')
+              }
+            })
+          }
+          return
         default:
           setEmailTarget(request)
           setShowEmailModal(true)
